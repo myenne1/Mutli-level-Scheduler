@@ -1,0 +1,14 @@
+Aishas-MBP:Solution aishacct$ ./mlfqs
+Queue entries one per linee:
+3	1583	10	3	0
+13	1583	50	3	0
+100	1583	10	3	1
+
+PID: 1583, ARRIVAL TIME: 100
+CREATE: Process 1583 entered the ready queue at time 100
+RUN: Process 1583 started execution from level 1 at time 100; wants to execute for 10 ticks.
+FINISHED: Process 1583 finished at time 110.
+Scheduler shutdown at time 110.
+Total CPU usage for all processes scheduled:
+Process <<null>>:	99 time units.
+Process 1583:		10 time units.
