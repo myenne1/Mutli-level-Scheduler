@@ -30,23 +30,34 @@ void processQ1()
 {
     int q = 10;
     int b = 1;
+    int usedTime = 0;
     Process p;
 
     remove_from_front(&q1, &p);
 
-    if (p.io == 0 && p.repeat == 0 && p.remainingRunTime == 0)
+    if (p.remainingRunTime <= q)
     {
-        runningProcessCount -= 1;
-        printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
-    }
-    else
-    {
-        if (p.remainingRunTime <= q)
+        printf("RUN: Process %d started execution from level 1 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
+        if (p.remainingRunTime < q)
         {
-            printf("RUN: Process %d started execution from level 1 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
+            usedTime = p.remainingRunTime; // ensures currentTime is accurate and run times aren't negative
+            p.remainingRunTime = 0;
+            currentTime += usedTime;
+        }
+        else
+        {
             p.remainingRunTime -= q;
             currentTime += q;
-            p.ioEndTime = currentTime + p.io;
+        }
+
+        if (p.io == 0 && p.repeat == 0) // Checks if process is finished
+        {
+            runningProcessCount -= 1;
+            printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
+        }
+        else
+        {
+            p.ioEndTime = currentTime + p.io; // Moves to I/O if not finished
 
             if (blockedCount < MAX_BLOCKED)
             {
@@ -59,13 +70,13 @@ void processQ1()
                 printf("Blocked Processes array reached limit\n");
             }
         }
-        else
-        {
-            p.remainingRunTime -= q;
-            currentTime += q;
+    }
+    else 
+    { // Runs and demotes to level 2
+        p.remainingRunTime -= q; 
+        currentTime += q;
 
-            add_to_queue(&q2, &p, p.pid);
-        }
+        add_to_queue(&q2, &p, p.pid);
     }
 }
 
@@ -130,7 +141,8 @@ int main(int argc, char *argv[])
                 blockedCount--;
             }
         }
-        if (!empty_queue(&readyQueue)) {
+        if (!empty_queue(&readyQueue))
+        {
             remove_from_front(&readyQueue, &p);
             add_to_queue(&q1, &p, p.pid);
             processQ1();
