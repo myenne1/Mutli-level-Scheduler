@@ -15,6 +15,8 @@ typedef struct _Process
     int io;
     int repeat;
     int ioEndTime;
+    int gCounter;
+    Queue queueLevel;
 } Process;
 
 // Globals
@@ -25,6 +27,21 @@ Queue q1, q2, q3, q4;
 int runningProcessCount = 0;
 int currentTime = 0;
 int blockedCount = 0;
+
+// Function to add process to blockedProcesses array
+void sendToIo(Process p)
+{
+    if (blockedCount < MAX_BLOCKED)
+    {
+        blockedProcesses[blockedCount] = p;
+        blockedCount++;
+        printf("I/O: Process %d blocked for I/O at time %d.\n", p.pid, currentTime);
+    }
+    else
+    {
+        printf("Blocked Processes array reached limit\n");
+    }
+}
 
 void processQ1()
 {
@@ -58,26 +75,81 @@ void processQ1()
         else
         {
             p.ioEndTime = currentTime + p.io; // Moves to I/O if not finished
-
-            if (blockedCount < MAX_BLOCKED)
-            {
-                blockedProcesses[blockedCount] = p;
-                blockedCount++;
-                printf("I/O: Process %d blocked for I/O at time %d.\n", p.pid, currentTime);
-            }
-            else
-            {
-                printf("Blocked Processes array reached limit\n");
-            }
+            p.queueLevel = q1;
+            sendToIo(p);
         }
     }
-    else 
+    else
     { // Runs and demotes to level 2
-        p.remainingRunTime -= q; 
+        p.remainingRunTime -= q;
         currentTime += q;
 
         add_to_queue(&q2, &p, p.pid);
+
+        processQ2();
     }
+}
+
+void processQ2()
+{
+    int q = 30;
+    int b = 2;
+    int g = 1;
+    int usedTime = 0;
+    Process p;
+
+    if (empty_queue(&q1))
+    {
+
+        printf("QUEUED: Process %d queued at level 2 at time %d.\n", p.pid, currentTime);
+        remove_from_front(&q2, &p);
+        p.queueLevel = q2;
+
+        printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
+        if (p.remainingRunTime < q)
+        {
+            usedTime = p.remainingRunTime;
+            p.remainingRunTime = 0;
+            currentTime += usedTime;
+            p.gCounter += 1;
+        }
+        else
+        {
+            p.remainingRunTime -= q;
+            currentTime += q;
+            p.gCounter += 1;
+        }
+
+        if (p.gCounter == g && p.remainingRunTime != 0) // Checks if process is finished
+        {
+            add_to_queue(&q3, &p, p.pid); // Demote to level 3
+            processQ3();
+        }
+        else if (p.gCounter < g) {
+            // Promotion logic
+        }
+
+        // Still needs work (rest is copy and pasted)
+            // else
+            // {
+            //     p.ioEndTime = currentTime + p.io; // Moves to I/O if not finished
+
+            //     if (blockedCount < MAX_BLOCKED)
+            //     {
+            //         blockedProcesses[blockedCount] = p;
+            //         blockedCount++;
+            //         printf("I/O: Process %d blocked for I/O at time %d.\n", p.pid, currentTime);
+            //     }
+            //     else
+            //     {
+            //         printf("Blocked Processes array reached limit\n");
+            //     }
+            // }
+    }
+}
+
+void processQ3()
+{
 }
 
 int main(int argc, char *argv[])
@@ -132,7 +204,7 @@ int main(int argc, char *argv[])
             {
                 blockedProcesses[i].remainingRunTime = blockedProcesses[i].originalRunTime; // Reset run time for repeat
                 blockedProcesses[i].repeat -= 1;
-                add_to_queue(&q1, &blockedProcesses[i], &blockedProcesses[i].pid);
+                add_to_queue(&p.queueLevel, &blockedProcesses[i], &blockedProcesses[i].pid);
 
                 for (int j = i; j < blockedCount - 1; j++)
                 { // Removes process from blockedProcesses array by shifting all elements after it to the left
