@@ -106,45 +106,63 @@ void processQ2()
         p.queueLevel = q2;
 
         printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
-        if (p.remainingRunTime < q)
+
+        if (p.remainingRunTime <= q)
         {
-            usedTime = p.remainingRunTime;
-            p.remainingRunTime = 0;
-            currentTime += usedTime;
-            p.gCounter += 1;
+            if(p.remainingRunTime < q)
+            {
+            
+                usedTime = p.remainingRunTime;
+            
+                p.remainingRunTime = 0;
+            
+                currentTime += usedTime;
+            }
+            else{
+                p.remainingRunTime = 0;
+                currentTime += q;
+            }
+
+            p.gCounter++;
+            p.bCounter = 0;
+
+            if(p.gCounter >= 1)
+            {
+                p.queueLevel = 1;
+                p.gCounter = 0;
+                add_to_queue(&q1,&p, p.pid)
+            }
+            else if(p.io == 0 && p.repeat == 0)
+            {
+                runningProcessCount--;
+                printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
+            }
+            else
+            {
+                p.ioEndTime = currentTime + p.io;
+                sendToIo(p);
+            }
         }
         else
         {
             p.remainingRunTime -= q;
             currentTime += q;
-            p.gCounter += 1;
-        }
 
-        if (p.gCounter == g && p.remainingRunTime != 0) // Checks if process is finished
-        {
-            add_to_queue(&q3, &p, p.pid); // Demote to level 3
-            processQ3();
-        }
-        else if (p.gCounter < g) {
-            // Promotion logic
-        }
+            p.bCounter++;
+            p.gCounter = 0;
 
-        // Still needs work (rest is copy and pasted)
-            // else
-            // {
-            //     p.ioEndTime = currentTime + p.io; // Moves to I/O if not finished
-
-            //     if (blockedCount < MAX_BLOCKED)
-            //     {
-            //         blockedProcesses[blockedCount] = p;
-            //         blockedCount++;
-            //         printf("I/O: Process %d blocked for I/O at time %d.\n", p.pid, currentTime);
-            //     }
-            //     else
-            //     {
-            //         printf("Blocked Processes array reached limit\n");
-            //     }
-            // }
+            if(p.bCounter >= 1)
+            {
+                p.queueLevel = 3;
+                p.bCounter = 0;
+                add_to_queue(&q3, &p, p.pid);
+                printf("QUEUED: Process %d at level 3 at time %d/n", p.pid, p.queueLevel);
+            }
+            else{
+                add_to_queue(&q1, &p, p.pid);
+                printf("QUEUED: Process %d at level 2 at time %d/n", p.pid, p.queueLevel);
+            }
+        }
     }
 }
 
