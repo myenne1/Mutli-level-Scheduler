@@ -92,83 +92,78 @@ void processQ1()
 
 void processQ2()
 {
-    int q = 30;
-    int b = 2;
-    int g = 1;
+    int q = 30; 
     int usedTime = 0;
     Process p;
 
     if (empty_queue(&q1))
     {
-
-        printf("QUEUED: Process %d queued at level 2 at time %d.\n", p.pid, currentTime);
         remove_from_front(&q2, &p);
-        p.queueLevel = q2;
-
-        printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
-
-        if (p.remainingRunTime <= q)
+        p.queueLevel = 2;  
+        
+        printf("RUN: Process %d started execution from level 1 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
+        
+        if (p.remainingRunTime <= q)  // Process finished within the quantum time
         {
-            if(p.remainingRunTime < q)
+            if (p.remainingRunTime < q)
             {
-            
                 usedTime = p.remainingRunTime;
-            
                 p.remainingRunTime = 0;
-            
                 currentTime += usedTime;
             }
-            else{
+            else
+            {
                 p.remainingRunTime = 0;
                 currentTime += q;
             }
-
-            p.gCounter++;
-            p.bCounter = 0;
-
-            if(p.gCounter >= 1)
+            
+            p.g_counter++;
+            p.b_counter = 0;
+            
+            if (p.g_counter >= 1) //Check if we need to promote
             {
-                p.queueLevel = 1;
-                p.gCounter = 0;
-                add_to_queue(&q1,&p, p.pid)
+                p.currentQueue = 1; 
+                p.g_counter = 0;
+                add_to_queue(&q1, &p, p.pid);
             }
-            else if(p.io == 0 && p.repeat == 0)
+            else if (p.io == 0 && p.repeat == 0)  // Process is done and does not need Io or Repeats
             {
                 runningProcessCount--;
                 printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
             }
-            else
+            else //else if we need IO
             {
                 p.ioEndTime = currentTime + p.io;
                 sendToIo(p);
             }
         }
-        else
-        {
+        else  // else if process cannot finish within quantum
+        { 
             p.remainingRunTime -= q;
             currentTime += q;
-
-            p.bCounter++;
-            p.gCounter = 0;
-
-            if(p.bCounter >= 1)
+            
+            p.b_counter++;
+            p.g_counter = 0;
+            
+            if (p.b_counter >= 2)
             {
-                p.queueLevel = 3;
-                p.bCounter = 0;
+                p.currentQueue = 3; 
+                p.b_counter = 0;
+
                 add_to_queue(&q3, &p, p.pid);
-                printf("QUEUED: Process %d at level 3 at time %d/n", p.pid, p.queueLevel);
             }
-            else{
-                add_to_queue(&q1, &p, p.pid);
-                printf("QUEUED: Process %d at level 2 at time %d/n", p.pid, p.queueLevel);
+            else
+            {
+                // Stay in same queue
+                add_to_queue(&q2, &p, p.pid);
+                printf("QUEUED: Process %d queued at level 2 at time %d.\n", p.pid, currentTime);
             }
         }
     }
 }
 
-void processQ3()
-{
-}
+
+
 
 int main(int argc, char *argv[])
 {
