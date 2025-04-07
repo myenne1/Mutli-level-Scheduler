@@ -16,6 +16,7 @@ typedef struct _Process
     int repeat;
     int ioEndTime;
     int gCounter;
+    int b_counter;
     Queue queueLevel;
 } Process;
 
@@ -99,9 +100,9 @@ void processQ2()
     if (empty_queue(&q1))
     {
         remove_from_front(&q2, &p);
-        p.queueLevel = 2;  
+        p.queueLevel = q2;  
         
-        printf("RUN: Process %d started execution from level 1 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
+        printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
         
         if (p.remainingRunTime <= q)  // Process finished within the quantum time
         {
@@ -117,13 +118,13 @@ void processQ2()
                 currentTime += q;
             }
             
-            p.g_counter++;
+            p.gCounter++;
             p.b_counter = 0;
             
-            if (p.g_counter >= 1) //Check if we need to promote
+            if (p.gCounter >= 1) //Check if we need to promote
             {
-                p.currentQueue = 1; 
-                p.g_counter = 0;
+                p.queueLevel = q1; 
+                p.gCounter = 0;
                 add_to_queue(&q1, &p, p.pid);
             }
             else if (p.io == 0 && p.repeat == 0)  // Process is done and does not need Io or Repeats
@@ -143,11 +144,11 @@ void processQ2()
             currentTime += q;
             
             p.b_counter++;
-            p.g_counter = 0;
+            p.gCounter = 0;
             
             if (p.b_counter >= 2)
             {
-                p.currentQueue = 3; 
+                p.queueLevel = q3; 
                 p.b_counter = 0;
 
                 add_to_queue(&q3, &p, p.pid);
@@ -161,8 +162,6 @@ void processQ2()
         }
     }
 }
-
-
 
 
 int main(int argc, char *argv[])
