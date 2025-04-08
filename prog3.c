@@ -467,7 +467,7 @@ int main(int argc, char *argv[])
     }
     printf("Scheduler shutdown at time %d.\n", currentTime);
     printf("Total CPU usage for all processes scheduled: \n");
-    printf("Process <<null>>: \t %d time units.\n", nullProcessTime);
+    printf("Process <<null>>: %d time units.\n", nullProcessTime);
 
     rewind_queue(&finishedProcesses);
     while (!end_of_queue(&finishedProcesses))
@@ -477,5 +477,6 @@ int main(int argc, char *argv[])
         printf("Process %d:\t %d time units.\n", p.pid, p.cpuTimeUsed);
         next_element(&finishedProcesses);
     }
+  
     return 0;
 }
