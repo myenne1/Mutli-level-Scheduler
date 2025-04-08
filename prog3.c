@@ -12,7 +12,8 @@ typedef struct _Process
     int pid;
     int originalRunTime;
     int remainingRunTime;
-    int io;
+    int remainingIoTime;
+    int originalIoTime;
     int repeat;
     int ioEndTime;
     int gCounter;
@@ -37,6 +38,7 @@ void sendToIo(Process p)
     if (blockedCount < MAX_BLOCKED)
     {
         blockedProcesses[blockedCount] = p;
+        blockedProcesses[blockedCount].queueLevel = p.queueLevel;
         blockedCount++;
         printf("I/O: Process %d blocked for I/O at time %d.\n", p.pid, currentTime);
     }
@@ -54,7 +56,7 @@ void processQ1()
     Process p;
 
     remove_from_front(&q1, &p);
-
+    printf("PID: %d Process run time: %d IO Time: %d IO End Time: %d Repeat: %d\n", p.pid, p.remainingRunTime, p.remainingIoTime, p.ioEndTime, p.repeat);
     if (p.remainingRunTime <= q)
     {
         printf("RUN: Process %d started execution from level 1 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
@@ -70,15 +72,17 @@ void processQ1()
             currentTime += q;
         }
 
-        if (p.io == 0 && p.repeat == 0) // Checks if process is finished
+        if (p.remainingIoTime == 0 && p.repeat == 0 && p.remainingRunTime == 0) // Checks if process is finished
         {
             runningProcessCount -= 1;
             printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
         }
         else
         {
-            p.ioEndTime = currentTime + p.io; // Moves to I/O if not finished
+            p.ioEndTime = currentTime + p.remainingIoTime; // Moves to I/O if not finished
+            p.remainingIoTime = p.originalIoTime;          // Resets I/O time
             sendToIo(p);
+            printf("NEW IO END TIME: %d\n", p.ioEndTime);
         }
     }
     else
@@ -126,14 +130,14 @@ void processQ2()
                 p.gCounter = 0;
                 add_to_queue(&q1, &p, p.pid);
             }
-            else if (p.io == 0 && p.repeat == 0) // Process is done and does not need Io or Repeats
+            else if (p.remainingIoTime == 0 && p.repeat == 0 && p.remainingRunTime == 0) // Process is done and does not need Io or Repeats
             {
                 runningProcessCount--;
                 printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
             }
             else // else if we need IO
             {
-                p.ioEndTime = currentTime + p.io;
+                p.ioEndTime = currentTime + p.remainingIoTime;
                 sendToIo(p);
             }
         }
@@ -183,14 +187,14 @@ int main(int argc, char *argv[])
     {
         if (buffer[0] == '\n' || buffer[0] == '\0' || buffer[0] == ' ')
             break;
-            
+
         Process newProcess;
         int fieldsRead = sscanf(buffer, "%d %d %d %d %d",
-                             &newProcess.time,
-                             &newProcess.pid,
-                             &newProcess.originalRunTime,
-                             &newProcess.io,
-                             &newProcess.repeat);
+                                &newProcess.time,
+                                &newProcess.pid,
+                                &newProcess.originalRunTime,
+                                &newProcess.originalIoTime,
+                                &newProcess.repeat);
 
         if (fieldsRead != 5)
         {
@@ -198,6 +202,7 @@ int main(int argc, char *argv[])
         }
 
         newProcess.remainingRunTime = newProcess.originalRunTime;
+        newProcess.remainingIoTime = newProcess.originalIoTime;
         newProcess.gCounter = 0;
         newProcess.b_counter = 0;
         newProcess.queueLevel = 1; // Start all processes at level 1
@@ -233,13 +238,17 @@ int main(int argc, char *argv[])
                 i--;
             }
         }
-        
+
         for (int i = 0; i < blockedCount; i++)
         {
             if (blockedProcesses[i].ioEndTime <= currentTime)
             {
-                blockedProcesses[i].remainingRunTime = blockedProcesses[i].originalRunTime; // Reset run time for repeat
-                blockedProcesses[i].repeat -= 1;
+                blockedProcesses[i].remainingRunTime = blockedProcesses[i].originalRunTime; // Reset run time and I/O time for repeat
+                blockedProcesses[i].remainingIoTime = 0;
+                if (blockedProcesses[i].repeat > 0)
+                {
+                    blockedProcesses[i].repeat -= 1;
+                }
 
                 int level = blockedProcesses[i].queueLevel;
 
@@ -268,14 +277,14 @@ int main(int argc, char *argv[])
                 i--;
             }
         }
-        
+
         if (!empty_queue(&readyQueue))
         {
             remove_from_front(&readyQueue, &p);
             add_to_queue(&q1, &p, p.pid);
             p.queueLevel = 1;
         }
-        
+
         if (!empty_queue(&q1))
         {
             processQ1();
@@ -301,6 +310,6 @@ int main(int argc, char *argv[])
             currentTime++;
         }
     }
-    
+
     return 0;
 }
