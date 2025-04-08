@@ -17,17 +17,19 @@ typedef struct _Process
     int ioEndTime;
     int gCounter;
     int b_counter;
-    Queue queueLevel;
+    int queueLevel;
 } Process;
 
 // Globals
 Process processes[11];
 Process blockedProcesses[MAX_BLOCKED];
-Queue blockedProcesses;
 Queue q1, q2, q3, q4;
 int runningProcessCount = 0;
 int currentTime = 0;
 int blockedCount = 0;
+
+// Forward declaration of processQ2
+void processQ2();
 
 // Function to add process to blockedProcesses array
 void sendToIo(Process p)
@@ -76,7 +78,6 @@ void processQ1()
         else
         {
             p.ioEndTime = currentTime + p.io; // Moves to I/O if not finished
-            p.queueLevel = q1;
             sendToIo(p);
         }
     }
@@ -86,25 +87,23 @@ void processQ1()
         currentTime += q;
 
         add_to_queue(&q2, &p, p.pid);
-
-        processQ2();
     }
 }
 
 void processQ2()
 {
-    int q = 30; 
+    int q = 30;
     int usedTime = 0;
     Process p;
 
     if (empty_queue(&q1))
     {
         remove_from_front(&q2, &p);
-        p.queueLevel = q2;  
-        
+        p.queueLevel = 2;
+
         printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n", p.pid, currentTime, p.remainingRunTime);
-        
-        if (p.remainingRunTime <= q)  // Process finished within the quantum time
+
+        if (p.remainingRunTime <= q) // Process finished within the quantum time
         {
             if (p.remainingRunTime < q)
             {
@@ -117,38 +116,38 @@ void processQ2()
                 p.remainingRunTime = 0;
                 currentTime += q;
             }
-            
+
             p.gCounter++;
             p.b_counter = 0;
-            
-            if (p.gCounter >= 1) //Check if we need to promote
+
+            if (p.gCounter >= 1) // Check if we need to promote
             {
-                p.queueLevel = q1; 
+                p.queueLevel = 1;
                 p.gCounter = 0;
                 add_to_queue(&q1, &p, p.pid);
             }
-            else if (p.io == 0 && p.repeat == 0)  // Process is done and does not need Io or Repeats
+            else if (p.io == 0 && p.repeat == 0) // Process is done and does not need Io or Repeats
             {
                 runningProcessCount--;
                 printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
             }
-            else //else if we need IO
+            else // else if we need IO
             {
                 p.ioEndTime = currentTime + p.io;
                 sendToIo(p);
             }
         }
-        else  // else if process cannot finish within quantum
-        { 
+        else // else if process cannot finish within quantum
+        {
             p.remainingRunTime -= q;
             currentTime += q;
-            
+
             p.b_counter++;
             p.gCounter = 0;
-            
+
             if (p.b_counter >= 2)
             {
-                p.queueLevel = q3; 
+                p.queueLevel = 3;
                 p.b_counter = 0;
 
                 add_to_queue(&q3, &p, p.pid);
@@ -163,6 +162,13 @@ void processQ2()
     }
 }
 
+void processQ3()
+{
+}
+
+void processQ4()
+{
+}
 
 int main(int argc, char *argv[])
 {
@@ -180,6 +186,7 @@ int main(int argc, char *argv[])
     {
         count++;
         runningProcessCount++;
+        processes[count].remainingRunTime = processes[count].originalRunTime;
     }
 
     // Initialize queues
@@ -216,7 +223,18 @@ int main(int argc, char *argv[])
             {
                 blockedProcesses[i].remainingRunTime = blockedProcesses[i].originalRunTime; // Reset run time for repeat
                 blockedProcesses[i].repeat -= 1;
-                add_to_queue(&p.queueLevel, &blockedProcesses[i], &blockedProcesses[i].pid);
+                
+                int level = blockedProcesses[i].queueLevel;
+
+                if (level == 1) {   
+                    add_to_queue(&q1, &blockedProcesses[i], blockedProcesses[i].pid);
+                } else if (level == 2) {
+                    add_to_queue(&q2, &blockedProcesses[i], blockedProcesses[i].pid);
+                } else if (level == 3) {
+                    add_to_queue(&q3, &blockedProcesses[i], blockedProcesses[i].pid);
+                } else {
+                    add_to_queue(&q4, &blockedProcesses[i], blockedProcesses[i].pid);
+                }
 
                 for (int j = i; j < blockedCount - 1; j++)
                 { // Removes process from blockedProcesses array by shifting all elements after it to the left
@@ -225,12 +243,32 @@ int main(int argc, char *argv[])
                 blockedCount--;
             }
         }
+
         if (!empty_queue(&readyQueue))
         {
             remove_from_front(&readyQueue, &p);
             add_to_queue(&q1, &p, p.pid);
+            p.queueLevel = 1;
+        }
+
+        if (!empty_queue(&q1))
+        {
             processQ1();
         }
-        currentTime++;
+
+        else if (!empty_queue(&q2))
+        {
+            processQ2();
+        }
+
+        else if (!empty_queue(&q3))
+        {
+            processQ3();
+        }
+
+        else if (!empty_queue(&q4))
+        {
+            processQ4();
+        }
     }
 }
