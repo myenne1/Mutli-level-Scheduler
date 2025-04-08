@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/marcogarcia/CodeFolder/Mutli-level-Scheduler",
+      "program": "/Users/marcogarcia/CodeFolder/Mutli-level-Scheduler/build/Debug/outDebug"
+    }
+  ]
+}
