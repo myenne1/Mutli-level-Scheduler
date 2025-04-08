@@ -1,3 +1,6 @@
+//Muhanad Yennes
+//Marco Garcia
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -438,19 +441,19 @@ int main(int argc, char *argv[])
             p.queueLevel = 1;
         }
 
-        if (!empty_queue(&q1))
+        if (!empty_queue(&q1) && p.remainingRunTime != 0)
         {
             processQ1();
         }
-        else if (!empty_queue(&q2))
+        else if (!empty_queue(&q2) && p.remainingRunTime != 0)
         {
             processQ2();
         }
-        else if (!empty_queue(&q3))
+        else if (!empty_queue(&q3) && p.remainingRunTime != 0)
         {
             processQ3();
         }
-        else if (!empty_queue(&q4))
+        else if (!empty_queue(&q4) && p.remainingRunTime != 0)
         {
             processQ4();
         }
