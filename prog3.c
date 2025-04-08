@@ -30,6 +30,7 @@ int runningProcessCount = 0;
 int currentTime = 0;
 int blockedCount = 0;
 int finishedProcessCount;
+int nullProcessTime = 0;
 
 // Forward declaration of processQ2
 void processQ2();
@@ -41,6 +42,7 @@ void sendToIo(Process p)
     {
         blockedProcesses[blockedCount] = p;
         blockedProcesses[blockedCount].queueLevel = p.queueLevel;
+        blockedProcesses[blockedCount].ioEndTime = currentTime + p.remainingIoTime;
         blockedCount++;
         printf("I/O: Process %d blocked for I/O at time %d.\n", p.pid, currentTime);
     }
@@ -85,8 +87,6 @@ void processQ1()
         }
         else if (p.remainingRunTime == 0)
         {
-            p.ioEndTime = currentTime + p.remainingIoTime; // Moves to I/O if not finished
-            p.remainingIoTime = p.originalIoTime;          // Resets I/O time
             sendToIo(p);
         }
     }
@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
     init_queue(&q4, sizeof(Process), TRUE, NULL, FALSE);
 
     // Start simulation
-    while (runningProcessCount > 0)
+    while (runningProcessCount > 0 || count > 0 || blockedCount > 0)
     {
         for (int i = 0; i < count; i++) // checks if any processes arrived
         {
@@ -437,19 +437,16 @@ int main(int argc, char *argv[])
         {
             processQ4();
         }
-        else if (count == 0 && blockedCount == 0)
+        else if (runningProcessCount <= 0 && count == 0 && blockedCount == 0)
         {
             break;
         }
         else
         {
+            printf("RUN: Process <<null>> executing at time %d.\n", currentTime);
             currentTime++;
+            nullProcessTime++;
         }
     }
-
-    for(int i = 0; i < finishedProcessCount; i++) {
-
-    }
-
     return 0;
 }
