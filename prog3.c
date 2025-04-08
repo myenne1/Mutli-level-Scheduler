@@ -477,6 +477,6 @@ int main(int argc, char *argv[])
         printf("Process %d:\t %d time units.\n", p.pid, p.cpuTimeUsed);
         next_element(&finishedProcesses);
     }
-
+  
     return 0;
 }
