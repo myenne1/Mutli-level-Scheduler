@@ -178,15 +178,32 @@ int main(int argc, char *argv[])
 
     printf("Queue entries one per line: \n");
 
-    while (scanf("%d %d %d %d %d", &processes[count].time,
-                 &processes[count].pid,
-                 &processes[count].originalRunTime,
-                 &processes[count].io,
-                 &processes[count].repeat) == 5)
+    char buffer[256];
+    while (count < 11 && fgets(buffer, sizeof(buffer), stdin) != NULL)
     {
-        count++;
+        if (buffer[0] == '\n' || buffer[0] == '\0' || buffer[0] == ' ')
+            break;
+            
+        Process newProcess;
+        int fieldsRead = sscanf(buffer, "%d %d %d %d %d",
+                             &newProcess.time,
+                             &newProcess.pid,
+                             &newProcess.originalRunTime,
+                             &newProcess.io,
+                             &newProcess.repeat);
+
+        if (fieldsRead != 5)
+        {
+            break;
+        }
+
+        newProcess.remainingRunTime = newProcess.originalRunTime;
+        newProcess.gCounter = 0;
+        newProcess.b_counter = 0;
+        newProcess.queueLevel = 1; // Start all processes at level 1
+
+        processes[count++] = newProcess;
         runningProcessCount++;
-        processes[count].remainingRunTime = processes[count].originalRunTime;
     }
 
     // Initialize queues
@@ -198,13 +215,13 @@ int main(int argc, char *argv[])
     init_queue(&q4, sizeof(Process), TRUE, NULL, FALSE);
 
     // Start simulation
-    while (runningProcessCount != 0)
+    while (runningProcessCount > 0)
     {
         for (int i = 0; i < count; i++) // checks if any processes arrived
         {
             if (processes[i].time <= currentTime)
             {
-                printf("PID: %d Arrival Time: %d\n", processes[i].pid, currentTime);
+                printf("PID: %d, ARRIVAL TIME: %d\n", processes[i].pid, currentTime);
                 add_to_queue(&readyQueue, &processes[i], processes[i].pid);
                 printf("CREATE: Process %d entered the ready queue at time %d.\n", processes[i].pid, currentTime);
 
@@ -216,23 +233,30 @@ int main(int argc, char *argv[])
                 i--;
             }
         }
-
+        
         for (int i = 0; i < blockedCount; i++)
         {
             if (blockedProcesses[i].ioEndTime <= currentTime)
             {
                 blockedProcesses[i].remainingRunTime = blockedProcesses[i].originalRunTime; // Reset run time for repeat
                 blockedProcesses[i].repeat -= 1;
-                
+
                 int level = blockedProcesses[i].queueLevel;
 
-                if (level == 1) {   
+                if (level == 1)
+                {
                     add_to_queue(&q1, &blockedProcesses[i], blockedProcesses[i].pid);
-                } else if (level == 2) {
+                }
+                else if (level == 2)
+                {
                     add_to_queue(&q2, &blockedProcesses[i], blockedProcesses[i].pid);
-                } else if (level == 3) {
+                }
+                else if (level == 3)
+                {
                     add_to_queue(&q3, &blockedProcesses[i], blockedProcesses[i].pid);
-                } else {
+                }
+                else
+                {
                     add_to_queue(&q4, &blockedProcesses[i], blockedProcesses[i].pid);
                 }
 
@@ -241,34 +265,42 @@ int main(int argc, char *argv[])
                     blockedProcesses[j] = blockedProcesses[j + 1];
                 }
                 blockedCount--;
+                i--;
             }
         }
-
+        
         if (!empty_queue(&readyQueue))
         {
             remove_from_front(&readyQueue, &p);
             add_to_queue(&q1, &p, p.pid);
             p.queueLevel = 1;
         }
-
+        
         if (!empty_queue(&q1))
         {
             processQ1();
         }
-
         else if (!empty_queue(&q2))
         {
             processQ2();
         }
-
         else if (!empty_queue(&q3))
         {
             processQ3();
         }
-
         else if (!empty_queue(&q4))
         {
             processQ4();
         }
+        else if (count == 0 && blockedCount == 0)
+        {
+            break;
+        }
+        else
+        {
+            currentTime++;
+        }
     }
+    
+    return 0;
 }
