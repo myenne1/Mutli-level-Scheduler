@@ -19,13 +19,14 @@ typedef struct _Process
     int gCounter;
     int bCounter;
     int queueLevel;
+    int cpuTimeUsed;
 } Process;
 
 // Globals
 Process processes[11];
 Process blockedProcesses[MAX_BLOCKED];
-Process finishedProcesses[11];
 Queue q1, q2, q3, q4;
+Queue finishedProcesses;
 int runningProcessCount = 0;
 int currentTime = 0;
 int blockedCount = 0;
@@ -33,6 +34,15 @@ int finishedProcessCount;
 
 // Forward declaration of processQ2
 void processQ2();
+
+int compare_processes(const void *e1, const void *e2)
+{
+    const Process *p1 = (const Process *)e1;
+    const Process *p2 = (const Process *)e2;
+
+    // Consider processes equal if their PID matches
+    return p1->pid != p2->pid;
+}
 
 // Function to add process to blockedProcesses array
 void sendToIo(Process p)
@@ -50,11 +60,6 @@ void sendToIo(Process p)
     }
 }
 
-void addToFinishedProcesses(Process p) {
-    finishedProcesses[finishedProcessCount] = p;
-    finishedProcessCount++;
-}
-
 void processQ1()
 {
     int q = 10;
@@ -70,11 +75,13 @@ void processQ1()
         {
             usedTime = p.remainingRunTime; // ensures currentTime is accurate and run times aren't negative
             p.remainingRunTime = 0;
+            p.cpuTimeUsed = usedTime;
             currentTime += usedTime;
         }
         else
         {
             p.remainingRunTime -= q;
+            p.cpuTimeUsed += q;
             currentTime += q;
         }
 
@@ -82,6 +89,7 @@ void processQ1()
         {
             runningProcessCount -= 1;
             printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
+            add_to_queue(&finishedProcesses, &p, p.pid);
         }
         else if (p.remainingRunTime == 0)
         {
@@ -107,28 +115,30 @@ void processQ2()
     if (empty_queue(&q1))
     {
         remove_from_front(&q2, &p);
-        
-        printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n", 
+
+        printf("RUN: Process %d started execution from level 2 at time %d; wants to execute for %d ticks.\n",
                p.pid, currentTime, p.remainingRunTime);
-        
+
         if (p.remainingRunTime <= q)
         {
             currentTime += p.remainingRunTime;
+            p.cpuTimeUsed += p.remainingRunTime;
             p.remainingRunTime = 0;
-            
+
             p.gCounter++;
             p.bCounter = 0;
-            
+
             if (p.gCounter >= 1)
             {
                 p.queueLevel = 1;
                 p.gCounter = 0;
             }
-            
+
             if (p.repeat == 0 && p.remainingIoTime == 0) // Checks if process is finished
             {
                 runningProcessCount--;
                 printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
+                add_to_queue(&finishedProcesses, &p, p.pid);
             }
             else if (p.remainingIoTime > 0) // Moves to I/O if not finished
             {
@@ -151,11 +161,12 @@ void processQ2()
         else
         {
             p.remainingRunTime -= q;
+            p.cpuTimeUsed += q;
             currentTime += q;
-            
+
             p.bCounter++;
             p.gCounter = 0;
-            
+
             if (p.bCounter >= 2)
             {
                 p.queueLevel = 3;
@@ -180,28 +191,30 @@ void processQ3()
     if (empty_queue(&q1) && empty_queue(&q2))
     {
         remove_from_front(&q3, &p);
-        
-        printf("RUN: Process %d started execution from level 3 at time %d; wants to execute for %d ticks.\n", 
+
+        printf("RUN: Process %d started execution from level 3 at time %d; wants to execute for %d ticks.\n",
                p.pid, currentTime, p.remainingRunTime);
-        
+
         if (p.remainingRunTime <= q)
         {
             currentTime += p.remainingRunTime;
+            p.cpuTimeUsed += p.remainingRunTime;
             p.remainingRunTime = 0;
-            
+
             p.gCounter++;
             p.bCounter = 0;
-            
+
             if (p.gCounter >= 1)
             {
                 p.queueLevel = 2;
                 p.gCounter = 0;
             }
-            
+
             if (p.repeat == 0 && p.remainingIoTime == 0)
             {
                 runningProcessCount--;
                 printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
+                add_to_queue(&finishedProcesses, &p, p.pid);
             }
             else if (p.remainingIoTime > 0)
             {
@@ -224,11 +237,12 @@ void processQ3()
         else
         {
             p.remainingRunTime -= q;
+            p.cpuTimeUsed += q;
             currentTime += q;
-            
+
             p.bCounter++;
             p.gCounter = 0;
-            
+
             if (p.bCounter >= 2)
             {
                 p.queueLevel = 4;
@@ -253,28 +267,30 @@ void processQ4()
     if (empty_queue(&q1) && empty_queue(&q2) && empty_queue(&q3))
     {
         remove_from_front(&q4, &p);
-        
-        printf("RUN: Process %d started execution from level 4 at time %d; wants to execute for %d ticks.\n", 
+
+        printf("RUN: Process %d started execution from level 4 at time %d; wants to execute for %d ticks.\n",
                p.pid, currentTime, p.remainingRunTime);
-        
+
         if (p.remainingRunTime <= q)
         {
             currentTime += p.remainingRunTime;
+            p.cpuTimeUsed += p.remainingRunTime;
             p.remainingRunTime = 0;
-            
+
             p.gCounter++;
             p.bCounter = 0;
-            
+
             if (p.gCounter >= 1)
             {
                 p.queueLevel = 3;
                 p.gCounter = 0;
             }
-            
+
             if (p.repeat == 0 && p.remainingIoTime == 0)
             {
                 runningProcessCount--;
                 printf("FINISHED: Process %d finished at time %d.\n", p.pid, currentTime);
+                add_to_queue(&finishedProcesses, &p, p.pid);
             }
             else if (p.remainingIoTime > 0)
             {
@@ -297,17 +313,17 @@ void processQ4()
         else
         {
             p.remainingRunTime -= q;
+            p.cpuTimeUsed += q;
             currentTime += q;
-            
+
             p.bCounter++;
             p.gCounter = 0;
-            
+
             add_to_queue(&q4, &p, p.pid);
             printf("QUEUED: Process %d queued at level 4 at time %d.\n", p.pid, currentTime);
         }
     }
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -348,6 +364,7 @@ int main(int argc, char *argv[])
 
     // Initialize queues
     init_queue(&readyQueue, sizeof(Process), TRUE, NULL, FALSE);
+    init_queue(&finishedProcesses, sizeof(Process), FALSE, compare_processes, TRUE);
 
     init_queue(&q1, sizeof(Process), TRUE, NULL, FALSE); // q1 = highest priority
     init_queue(&q2, sizeof(Process), TRUE, NULL, FALSE);
@@ -384,7 +401,7 @@ int main(int argc, char *argv[])
                 {
                     blockedProcesses[i].repeat -= 1;
                 }
-                
+
                 // add_to_queue(&readyQueue, &blockedProcesses[i], blockedProcesses[i].pid);
                 int level = blockedProcesses[i].queueLevel;
 
@@ -446,9 +463,17 @@ int main(int argc, char *argv[])
             currentTime++;
         }
     }
+    printf("Scheduler shutdown at time %d.\n", currentTime);
+    printf("Total CPU usage for all processes scheduled: \n");
+    printf("Process <<null>>: \t ... time units.\n");
 
-    for(int i = 0; i < finishedProcessCount; i++) {
-
+    rewind_queue(&finishedProcesses);
+    while (!end_of_queue(&finishedProcesses))
+    {
+        Process p;
+        peek_at_current(&finishedProcesses, &p);
+        printf("Process %d:\t %d time units.\n", p.pid, p.cpuTimeUsed);
+        next_element(&finishedProcesses);
     }
 
     return 0;
